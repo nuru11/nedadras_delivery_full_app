@@ -1,0 +1,27 @@
+{
+  "city": "Addis Ababa",
+  "country": "ET",
+  "items": [
+    { "label": "Bole, Addis Ababa", "lat": 8.9946, "lng": 38.7870 },
+    { "label": "Bole Medhanealem, Addis Ababa", "lat": 8.9906, "lng": 38.7890 },
+    { "label": "Mexico Square, Addis Ababa", "lat": 9.0110, "lng": 38.7613 },
+    { "label": "Meskel Square, Addis Ababa", "lat": 9.0100, "lng": 38.7610 },
+    { "label": "Piazza (Arada), Addis Ababa", "lat": 9.0348, "lng": 38.7469 },
+    { "label": "4 Kilo, Addis Ababa", "lat": 9.0410, "lng": 38.7616 },
+    { "label": "6 Kilo, Addis Ababa", "lat": 9.0497, "lng": 38.7508 },
+    { "label": "Sidist Kilo, Addis Ababa", "lat": 9.0500, "lng": 38.7510 },
+    { "label": "Addis Ababa Bole International Airport, Addis Ababa", "lat": 8.9779, "lng": 38.7993 },
+    { "label": "CMC (St. Michael), Addis Ababa", "lat": 9.0290, "lng": 38.8240 },
+    { "label": "Gerji, Addis Ababa", "lat": 8.9990, "lng": 38.8230 },
+    { "label": "Kazanchis, Addis Ababa", "lat": 9.0146, "lng": 38.7707 },
+    { "label": "Saris, Addis Ababa", "lat": 8.9560, "lng": 38.7520 },
+    { "label": "Megenagna, Addis Ababa", "lat": 9.0160, "lng": 38.8170 },
+    { "label": "Ayat, Addis Ababa", "lat": 9.0400, "lng": 38.8700 },
+    { "label": "Jemo, Addis Ababa", "lat": 8.9460, "lng": 38.7020 },
+    { "label": "Kera, Addis Ababa", "lat": 9.0040, "lng": 38.7240 },
+    { "label": "Merkato, Addis Ababa", "lat": 9.0300, "lng": 38.7360 },
+    { "label": "Shola, Addis Ababa", "lat": 9.0340, "lng": 38.7800 },
+    { "label": "Gurd Shola, Addis Ababa", "lat": 9.0240, "lng": 38.8050 }
+  ]
+}
+

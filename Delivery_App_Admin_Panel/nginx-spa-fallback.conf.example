@@ -1,0 +1,11 @@
+# If the admin panel is served by nginx (e.g. adminpanel.negadrasexpress.net),
+# add this so routes like /basic-tables work on refresh (SPA fallback).
+#
+# Inside your server { } block for the admin panel:
+#
+#   root /path/to/delivery_adminpanel/dist;
+#   index index.html;
+#   location / {
+#     try_files $uri $uri/ /index.html;
+#   }
+#
