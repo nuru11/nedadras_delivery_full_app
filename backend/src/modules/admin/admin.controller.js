@@ -367,6 +367,53 @@ async function updateCommissionRates(req, res) {
   }
 }
 
+async function listAdmins(req, res) {
+  try {
+    const data = await AdminService.listAdmins();
+    return res.status(200).json(data);
+  } catch (err) {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Failed to list admins";
+    return res.status(status).json({ message });
+  }
+}
+
+async function createAdmin(req, res) {
+  try {
+    const result = await AdminService.createAdmin(req.body || {});
+    return res.status(201).json(result);
+  } catch (err) {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Failed to create admin";
+    return res.status(status).json({ message });
+  }
+}
+
+async function updateAdmin(req, res) {
+  try {
+    const result = await AdminService.updateAdmin(req.params.id, req.body || {});
+    return res.status(200).json(result);
+  } catch (err) {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Failed to update admin";
+    return res.status(status).json({ message });
+  }
+}
+
+async function updateAdminPassword(req, res) {
+  try {
+    const result = await AdminService.updateAdminPassword(
+      req.params.id,
+      req.body || {}
+    );
+    return res.status(200).json(result);
+  } catch (err) {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Failed to update password";
+    return res.status(status).json({ message });
+  }
+}
+
 module.exports = {
   getDashboardOverview,
   getUsers,
@@ -391,4 +438,8 @@ module.exports = {
   updateCommissionRates,
   updateDeliveryPayment,
   updateDeliveryRemark,
+  listAdmins,
+  createAdmin,
+  updateAdmin,
+  updateAdminPassword,
 };

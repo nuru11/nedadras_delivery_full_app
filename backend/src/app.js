@@ -63,8 +63,23 @@ async function ensureFirstAdmin() {
   const username = process.env.ADMIN_USERNAME || "admin";
   const plainPassword = process.env.ADMIN_DEFAULT_PASSWORD || "changeme";
   const password_hash = bcrypt.hashSync(plainPassword, 10);
-  await Admin.create({ username, password_hash, name: "Admin" });
+  await Admin.create({
+    username,
+    password_hash,
+    name: "Admin",
+    admin_role: "super_admin",
+  });
   console.log("First admin created (username:", username, "). Change password in production.");
+}
+
+async function ensureSuperAdminExists() {
+  const Admin = require("./modules/admins/admin.model");
+  const superCount = await Admin.count({ where: { admin_role: "super_admin" } });
+  if (superCount > 0) return;
+  const first = await Admin.findOne({ order: [["created_at", "ASC"]] });
+  if (!first) return;
+  await first.update({ admin_role: "super_admin" });
+  console.log("Promoted oldest admin to super_admin (no super_admin existed).");
 }
 
 // Top-level server.listen (like hosted app) – no bootstrap/require.main
@@ -73,6 +88,7 @@ server.listen(PORT, async () => {
     if (process.env.NODE_ENV !== "production") {
       await sequelize.sync();
       await ensureFirstAdmin();
+      await ensureSuperAdminExists();
     } else {
       await sequelize.authenticate();
     }

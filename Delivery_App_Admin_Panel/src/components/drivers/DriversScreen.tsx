@@ -7,12 +7,14 @@ import {
   updateDriverStatus,
   updateDriverType,
 } from "../../services/driver.service";
+import { can } from "../../utils/adminPermissions";
 
 interface DriversScreenProps {
   filterStatus?: Driver["status"];
 }
 
 export default function DriversScreen({ filterStatus }: DriversScreenProps) {
+  const canWriteDrivers = can("drivers:write");
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -146,32 +148,42 @@ export default function DriversScreen({ filterStatus }: DriversScreenProps) {
                   {driver.plate_number || "—"}
                 </TableCell>
                 <TableCell className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                  <select
-                    value={driver.driver_type ?? "freelancer"}
-                    onChange={(e) =>
-                      handleTypeChange(
-                        driver.id,
-                        e.target.value as Driver["driver_type"]
-                      )
-                    }
-                    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                  >
-                    <option value="in_house">In house</option>
-                    <option value="freelancer">Freelancer</option>
-                  </select>
+                  {canWriteDrivers ? (
+                    <select
+                      value={driver.driver_type ?? "freelancer"}
+                      onChange={(e) =>
+                        handleTypeChange(
+                          driver.id,
+                          e.target.value as Driver["driver_type"]
+                        )
+                      }
+                      className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                    >
+                      <option value="in_house">In house</option>
+                      <option value="freelancer">Freelancer</option>
+                    </select>
+                  ) : (
+                    <span className="text-sm">
+                      {driver.driver_type === "in_house" ? "In house" : "Freelancer"}
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                  <select
-                    value={driver.status ?? "pending"}
-                    onChange={(e) =>
-                      handleStatusChange(driver.id, e.target.value as Driver["status"])
-                    }
-                    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                  {canWriteDrivers ? (
+                    <select
+                      value={driver.status ?? "pending"}
+                      onChange={(e) =>
+                        handleStatusChange(driver.id, e.target.value as Driver["status"])
+                      }
+                      className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  ) : (
+                    <span className="text-sm">{driver.status ?? "pending"}</span>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

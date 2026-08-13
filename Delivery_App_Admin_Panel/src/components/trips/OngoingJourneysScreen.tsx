@@ -9,6 +9,7 @@ import {
   updateDeliveryStatus,
   Delivery,
 } from "../../services/delivery.service";
+import { can } from "../../utils/adminPermissions";
 
 const STATUS_COLORS: Record<
   string,
@@ -46,6 +47,7 @@ function dropDisplay(d: Delivery): string {
 }
 
 export default function OngoingJourneysScreen() {
+  const canWriteDeliveries = can("deliveries:write");
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
@@ -167,24 +169,32 @@ export default function OngoingJourneysScreen() {
                         role="presentation"
                         onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
                       >
-                        <select
-                          value={d.status}
-                          onChange={(e) =>
-                            handleStatusChange(d.id, e.target.value)
-                          }
-                          disabled={statusUpdatingId === d.id}
-                          className="h-8 min-w-[100px] rounded border border-gray-300 bg-transparent px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white disabled:opacity-50"
-                        >
-                          {STATUS_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                        {statusUpdatingId === d.id && (
-                          <span className="ml-2 text-xs text-gray-500">
-                            Updating...
-                          </span>
+                        {canWriteDeliveries ? (
+                          <>
+                            <select
+                              value={d.status}
+                              onChange={(e) =>
+                                handleStatusChange(d.id, e.target.value)
+                              }
+                              disabled={statusUpdatingId === d.id}
+                              className="h-8 min-w-[100px] rounded border border-gray-300 bg-transparent px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white disabled:opacity-50"
+                            >
+                              {STATUS_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                            {statusUpdatingId === d.id && (
+                              <span className="ml-2 text-xs text-gray-500">
+                                Updating...
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <Badge size="sm" color={STATUS_COLORS[d.status] || "primary"}>
+                            {d.status}
+                          </Badge>
                         )}
                       </div>
                     </TableCell>

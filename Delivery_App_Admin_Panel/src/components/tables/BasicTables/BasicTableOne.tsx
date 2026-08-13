@@ -6,6 +6,7 @@ import { Modal } from "../../ui/modal";
 import Label from "../../form/Label";
 import UserWalletModal from "../../users/UserWalletModal";
 import { getAllUsers, AdminUser, updateUserStatus, createUser } from "../../../services/user.service";
+import { can } from "../../../utils/adminPermissions";
 
 type FilterType = "all" | "today" | "week" | "month";
 
@@ -14,6 +15,8 @@ interface UsersTableProps {
 }
 
 export default function UsersTable({ statusFilter }: UsersTableProps) {
+  const canWriteUsers = can("users:write");
+  const canDeposit = can("wallet:deposit");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -134,14 +137,18 @@ export default function UsersTable({ statusFilter }: UsersTableProps) {
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Total: {totalUsers} users
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500">
-            To add credit to a user&apos;s wallet, click <strong className="text-gray-700 dark:text-gray-300">Add balance</strong> in their row.
-          </p>
+          {canDeposit && (
+            <p className="text-xs text-gray-500 dark:text-gray-500">
+              To add credit to a user&apos;s wallet, click <strong className="text-gray-700 dark:text-gray-300">Add balance</strong> in their row.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <Button size="sm" onClick={() => setCreateUserModalOpen(true)}>
-            Create user
-          </Button>
+          {canWriteUsers && (
+            <Button size="sm" onClick={() => setCreateUserModalOpen(true)}>
+              Create user
+            </Button>
+          )}
           {[
             { key: "all", label: "All" },
             { key: "today", label: "Today" },
@@ -182,9 +189,11 @@ export default function UsersTable({ statusFilter }: UsersTableProps) {
               <TableCell isHeader className="p-4 dark:text-white">
                 Status
               </TableCell>
-              <TableCell isHeader className="p-4 dark:text-white">
-                Add balance
-              </TableCell>
+              {canDeposit && (
+                <TableCell isHeader className="p-4 dark:text-white">
+                  Add balance
+                </TableCell>
+              )}
             </TableRow>
           </TableHeader>
 
@@ -225,29 +234,35 @@ export default function UsersTable({ statusFilter }: UsersTableProps) {
                       : "—"}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                    <select
-                      value={user.status ?? "pending"}
-                      onChange={(e) =>
-                        handleStatusChange(user.id, e.target.value as AdminUser["status"])
-                      }
-                      className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
+                    {canWriteUsers ? (
+                      <select
+                        value={user.status ?? "pending"}
+                        onChange={(e) =>
+                          handleStatusChange(user.id, e.target.value as AdminUser["status"])
+                        }
+                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    ) : (
+                      <span className="text-sm">{user.status ?? "pending"}</span>
+                    )}
                   </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() =>
-                        setWalletModalUser({ id: user.id, name: user.name || "User" })
-                      }
-                    >
-                      Add balance
-                    </Button>
-                  </TableCell>
+                  {canDeposit && (
+                    <TableCell className="px-4 py-3">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() =>
+                          setWalletModalUser({ id: user.id, name: user.name || "User" })
+                        }
+                      >
+                        Add balance
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
@@ -283,7 +298,7 @@ export default function UsersTable({ statusFilter }: UsersTableProps) {
         </Button>
       </div>
 
-      {walletModalUser && (
+      {walletModalUser && canDeposit && (
         <UserWalletModal
           isOpen={!!walletModalUser}
           onClose={() => setWalletModalUser(null)}
@@ -292,6 +307,7 @@ export default function UsersTable({ statusFilter }: UsersTableProps) {
         />
       )}
 
+      {canWriteUsers && (
       <Modal
         isOpen={createUserModalOpen}
         onClose={() => {
@@ -387,6 +403,7 @@ export default function UsersTable({ statusFilter }: UsersTableProps) {
           </form>
         </div>
       </Modal>
+      )}
     </div>
   );
 }

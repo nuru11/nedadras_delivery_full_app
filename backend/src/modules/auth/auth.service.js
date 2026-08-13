@@ -329,12 +329,15 @@ async function adminLogin(username, password) {
     throw error;
   }
 
+  const adminRole = admin.admin_role || "operations";
+
   ensureJwtSecret();
   const token = jwt.sign(
     {
       sub: admin.id,
       role: "admin",
       username: admin.username,
+      adminRole,
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
@@ -346,6 +349,7 @@ async function adminLogin(username, password) {
       id: admin.id,
       username: admin.username,
       name: admin.name ?? null,
+      adminRole,
     },
   };
 }
@@ -368,6 +372,7 @@ async function getCurrentAdmin(adminId) {
     id: admin.id,
     username: admin.username,
     name: admin.name ?? null,
+    adminRole: admin.admin_role || "operations",
   };
 }
 

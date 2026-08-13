@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 
 // Assume these icons are imported from an icon library
@@ -18,51 +18,63 @@ import {
 
 
 import { useSidebar } from "../context/SidebarContext";
+import { can, type AdminPermission } from "../utils/adminPermissions";
 // import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  permission?: AdminPermission;
+  subItems?: {
+    name: string;
+    path: string;
+    pro?: boolean;
+    new?: boolean;
+    permission?: AdminPermission;
+  }[];
 };
 
-const navItems: NavItem[] = [
+const allNavItems: NavItem[] = [
   {
     icon: <GridIcon />,
     name: "Dashboard",
-    subItems: [{ name: "Dashboard", path: "/", pro: false }],
+    permission: "dashboard:read",
+    subItems: [{ name: "Dashboard", path: "/", pro: false, permission: "dashboard:read" }],
   },
 
   {
     name: "Users",
     icon: <UserCircleIcon />,
+    permission: "users:read",
     subItems: [
-      { name: "All Users", path: "/basic-tables", pro: false },
-      { name: "Pending Users", path: "/users/pending", pro: false },
-      { name: "Active Users", path: "/users/active", pro: false },
-      { name: "Inactive Users", path: "/users/inactive", pro: false },
+      { name: "All Users", path: "/basic-tables", pro: false, permission: "users:read" },
+      { name: "Pending Users", path: "/users/pending", pro: false, permission: "users:read" },
+      { name: "Active Users", path: "/users/active", pro: false, permission: "users:read" },
+      { name: "Inactive Users", path: "/users/inactive", pro: false, permission: "users:read" },
     ],
   },
 
   {
     name: "Drivers",
     icon: <BoltIcon />,
+    permission: "drivers:read",
     subItems: [
-      { name: "All Drivers", path: "/drivers", pro: false },
-      { name: "Pending Drivers", path: "/drivers/pending", pro: false },
-      { name: "Active Drivers", path: "/drivers/active", pro: false },
-      { name: "Inactive Drivers", path: "/drivers/inactive", pro: false },
+      { name: "All Drivers", path: "/drivers", pro: false, permission: "drivers:read" },
+      { name: "Pending Drivers", path: "/drivers/pending", pro: false, permission: "drivers:read" },
+      { name: "Active Drivers", path: "/drivers/active", pro: false, permission: "drivers:read" },
+      { name: "Inactive Drivers", path: "/drivers/inactive", pro: false, permission: "drivers:read" },
     ],
   },
 
   {
     name: "Trips",
     icon: <BoxIconLine />,
+    permission: "deliveries:read",
     subItems: [
-      { name: "Trips", path: "/trips", pro: false },
-      { name: "Ongoing Journeys", path: "/ongoing-journeys", pro: false },
-      { name: "Trip History", path: "/trips-history", pro: false },
+      { name: "Trips", path: "/trips", pro: false, permission: "deliveries:read" },
+      { name: "Ongoing Journeys", path: "/ongoing-journeys", pro: false, permission: "deliveries:read" },
+      { name: "Trip History", path: "/trips-history", pro: false, permission: "deliveries:read" },
     ],
   },
 
@@ -70,72 +82,45 @@ const navItems: NavItem[] = [
     name: "Payments",
     icon: <DollarLineIcon />,
     subItems: [
-      { name: "Settlements", path: "/payments/settlements", pro: false },
-      { name: "Payment summary", path: "/payments/summary", pro: false },
-      { name: "Commission rates", path: "/settings/commission-rates", pro: false },
+      { name: "Settlements", path: "/payments/settlements", pro: false, permission: "settlements:read" },
+      { name: "Payment summary", path: "/payments/summary", pro: false, permission: "payments:summary" },
+      { name: "Commission rates", path: "/settings/commission-rates", pro: false, permission: "commission:read" },
     ],
   },
 
-  // {
-  //   icon: <CalenderIcon />,
-  //   name: "Calendar",
-  //   path: "/calendar",
-  // },
-  // {
-  //   icon: <UserCircleIcon />,
-  //   name: "User Profile",
-  //   path: "/profile",
-  // },
-  // {
-  //   name: "Forms",
-  //   icon: <ListIcon />,
-  //   subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  // },
-  
-  // {
-  //   name: "Pages",
-  //   icon: <PageIcon />,
-  //   subItems: [
-  //     { name: "Blank Page", path: "/blank", pro: false },
-  //     { name: "404 Error", path: "/error-404", pro: false },
-  //   ],
-  // },
+  {
+    name: "Admins",
+    icon: <UserCircleIcon />,
+    permission: "admins:manage",
+    subItems: [
+      { name: "Manage admins", path: "/admins", pro: false, permission: "admins:manage" },
+    ],
+  },
 ];
 
-const othersItems: NavItem[] = [
-  // {
-  //   icon: <PieChartIcon />,
-  //   name: "Charts",
-  //   subItems: [
-  //     { name: "Line Chart", path: "/line-chart", pro: false },
-  //     { name: "Bar Chart", path: "/bar-chart", pro: false },
-  //   ],
-  // },
-  // {
-  //   icon: <BoxCubeIcon />,
-  //   name: "UI Elements",
-  //   subItems: [
-  //     { name: "Alerts", path: "/alerts", pro: false },
-  //     { name: "Avatar", path: "/avatars", pro: false },
-  //     { name: "Badge", path: "/badge", pro: false },
-  //     { name: "Buttons", path: "/buttons", pro: false },
-  //     { name: "Images", path: "/images", pro: false },
-  //     { name: "Videos", path: "/videos", pro: false },
-  //   ],
-  // },
-  // {
-  //   icon: <PlugInIcon />,
-  //   name: "Authentication",
-  //   subItems: [
-  //     { name: "Sign In", path: "/signin", pro: false },
-  //     { name: "Sign Up", path: "/signup", pro: false },
-  //   ],
-  // },
-];
+const othersItems: NavItem[] = [];
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
+
+  const navItems = useMemo(() => {
+    return allNavItems
+      .map((item) => {
+        if (item.permission && !can(item.permission)) {
+          return null;
+        }
+        if (item.subItems) {
+          const subItems = item.subItems.filter(
+            (sub) => !sub.permission || can(sub.permission)
+          );
+          if (subItems.length === 0) return null;
+          return { ...item, subItems };
+        }
+        return item;
+      })
+      .filter(Boolean) as NavItem[];
+  }, [location.pathname]);
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main" | "others";

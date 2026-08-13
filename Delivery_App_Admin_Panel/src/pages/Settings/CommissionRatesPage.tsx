@@ -8,8 +8,10 @@ import {
   getCommissionRates,
   updateCommissionRates,
 } from "../../services/settings.service";
+import { can } from "../../utils/adminPermissions";
 
 export default function CommissionRatesPage() {
+  const canWriteCommission = can("commission:write");
   const [inHousePercent, setInHousePercent] = useState<number>(10);
   const [freelancerPercent, setFreelancerPercent] = useState<number>(30);
   const [loading, setLoading] = useState(true);
@@ -107,6 +109,7 @@ export default function CommissionRatesPage() {
                   onChange={(e) =>
                     setInHousePercent(parseFloat(e.target.value) || 0)
                   }
+                  disabled={!canWriteCommission}
                 />
               </div>
               <div>
@@ -126,11 +129,14 @@ export default function CommissionRatesPage() {
                   onChange={(e) =>
                     setFreelancerPercent(parseFloat(e.target.value) || 0)
                   }
+                  disabled={!canWriteCommission}
                 />
               </div>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? "Saving…" : "Save rates"}
-              </Button>
+              {canWriteCommission && (
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Saving…" : "Save rates"}
+                </Button>
+              )}
             </form>
           )}
         </ComponentCard>

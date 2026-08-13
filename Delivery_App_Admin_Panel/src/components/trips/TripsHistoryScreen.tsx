@@ -10,6 +10,7 @@ import {
   updateDeliveryPayment,
   updateDeliveryRemark,
 } from "../../services/delivery.service";
+import { can } from "../../utils/adminPermissions";
 
 const STATUS_COLORS: Record<
   string,
@@ -49,6 +50,8 @@ function paymentLabel(d: Delivery): string {
 }
 
 export default function TripsHistoryScreen() {
+  const canWriteDeliveries = can("deliveries:write");
+  const canMarkPayment = can("deliveries:payment");
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
   const detailModal = useModal(false);
@@ -289,38 +292,46 @@ export default function TripsHistoryScreen() {
               )}
               <div>
                 <span className="text-gray-500 dark:text-gray-400 block mb-1">Admin remark</span>
-                <textarea
-                  value={remarkDraft}
-                  onChange={(e) => setRemarkDraft(e.target.value)}
-                  placeholder="Add an internal remark for this trip (visible only in admin panel)"
-                  rows={3}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-2"
-                  onClick={async () => {
-                    if (!detailDelivery) return;
-                    setSavingRemark(true);
-                    setPaymentMessage(null);
-                    try {
-                      const { delivery } = await updateDeliveryRemark(detailDelivery.id, remarkDraft);
-                      setDetailDelivery(delivery);
-                      await fetchDeliveries();
-                      setPaymentMessage({ type: "success", text: "Remark saved." });
-                    } catch (err: unknown) {
-                      const ax = err as { response?: { data?: { message?: string } } };
-                      const msg = ax?.response?.data?.message || "Failed to save remark";
-                      setPaymentMessage({ type: "error", text: msg });
-                    } finally {
-                      setSavingRemark(false);
-                    }
-                  }}
-                  disabled={savingRemark}
-                >
-                  {savingRemark ? "Saving..." : "Save remark"}
-                </Button>
+                {canWriteDeliveries ? (
+                  <>
+                    <textarea
+                      value={remarkDraft}
+                      onChange={(e) => setRemarkDraft(e.target.value)}
+                      placeholder="Add an internal remark for this trip (visible only in admin panel)"
+                      rows={3}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2"
+                      onClick={async () => {
+                        if (!detailDelivery) return;
+                        setSavingRemark(true);
+                        setPaymentMessage(null);
+                        try {
+                          const { delivery } = await updateDeliveryRemark(detailDelivery.id, remarkDraft);
+                          setDetailDelivery(delivery);
+                          await fetchDeliveries();
+                          setPaymentMessage({ type: "success", text: "Remark saved." });
+                        } catch (err: unknown) {
+                          const ax = err as { response?: { data?: { message?: string } } };
+                          const msg = ax?.response?.data?.message || "Failed to save remark";
+                          setPaymentMessage({ type: "error", text: msg });
+                        } finally {
+                          setSavingRemark(false);
+                        }
+                      }}
+                      disabled={savingRemark}
+                    >
+                      {savingRemark ? "Saving..." : "Save remark"}
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                    {detailDelivery.admin_remark || "—"}
+                  </p>
+                )}
               </div>
               <div>
                 <span className="text-gray-500 dark:text-gray-400 block mb-1">Pickup</span>
@@ -370,7 +381,7 @@ export default function TripsHistoryScreen() {
               </div>
               <div className="pt-4 flex flex-col gap-3">
                 <div className="flex justify-end gap-2">
-                  {detailDelivery.status === "delivered" && detailDelivery.payment !== "paid" && detailDelivery.user_id && (
+                  {canMarkPayment && detailDelivery.status === "delivered" && detailDelivery.payment !== "paid" && detailDelivery.user_id && (
                     <Button
                       size="sm"
                       onClick={async () => {
@@ -396,7 +407,7 @@ export default function TripsHistoryScreen() {
                       {updatingPayment ? "Updating..." : "Mark as paid (wallet)"}
                     </Button>
                   )}
-                  {detailDelivery.payment === "paid" && (
+                  {canMarkPayment && detailDelivery.payment === "paid" && (
                     <Button
                       size="sm"
                       variant="outline"

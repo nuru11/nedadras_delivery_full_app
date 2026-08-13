@@ -23,6 +23,7 @@ import {
 } from "../../services/delivery.service";
 import { getDrivers, Driver } from "../../services/driver.service";
 import { getUsers, User } from "../../services/user.service";
+import { can } from "../../utils/adminPermissions";
 
 const STATUS_COLORS: Record<
   string,
@@ -37,6 +38,7 @@ const STATUS_COLORS: Record<
 };
 
 export default function TripsScreen() {
+  const canWriteDeliveries = can("deliveries:write");
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -146,9 +148,11 @@ export default function TripsScreen() {
             <option value="cancelled">Cancelled</option>
           </select>
         </div>
-        <Button size="sm" onClick={createModal.openModal}>
-          Create Trip
-        </Button>
+        {canWriteDeliveries && (
+          <Button size="sm" onClick={createModal.openModal}>
+            Create Trip
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -229,7 +233,7 @@ export default function TripsScreen() {
                         role="presentation"
                         onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
                       >
-                        {d.status === "pending" && !d.driver_id && (
+                        {canWriteDeliveries && d.status === "pending" && !d.driver_id && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -363,7 +367,7 @@ export default function TripsScreen() {
                   {detailDelivery.created_at ? new Date(detailDelivery.created_at).toLocaleString() : "—"}
                 </span>
               </div>
-              {detailDelivery.status === "pending" && !detailDelivery.driver_id && (
+              {canWriteDeliveries && detailDelivery.status === "pending" && !detailDelivery.driver_id && (
                 <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
                   <Button
                     size="sm"

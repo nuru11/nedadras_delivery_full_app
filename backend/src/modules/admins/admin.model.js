@@ -1,6 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../config/db");
 
+const ADMIN_ROLES = ["super_admin", "operations", "finance"];
+
 const Admin = sequelize.define(
   "Admin",
   {
@@ -22,6 +24,11 @@ const Admin = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    admin_role: {
+      type: DataTypes.ENUM(...ADMIN_ROLES),
+      allowNull: false,
+      defaultValue: "operations",
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
@@ -35,3 +42,4 @@ const Admin = sequelize.define(
 );
 
 module.exports = Admin;
+module.exports.ADMIN_ROLES = ADMIN_ROLES;

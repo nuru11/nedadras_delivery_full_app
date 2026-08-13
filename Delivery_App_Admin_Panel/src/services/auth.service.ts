@@ -1,9 +1,11 @@
 import api from "../lib/api";
+import type { AdminRole } from "../utils/adminPermissions";
 
 export interface AdminUser {
   id: string;
   username: string;
   name?: string | null;
+  adminRole: AdminRole;
 }
 
 export interface AdminLoginResponse {

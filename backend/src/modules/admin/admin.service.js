@@ -1052,6 +1052,159 @@ async function getAllDriversPaymentSummary() {
   return { drivers: summaries };
 }
 
+function serializeAdmin(admin) {
+  return {
+    id: admin.id,
+    username: admin.username,
+    name: admin.name ?? null,
+    adminRole: admin.admin_role || "operations",
+    created_at: admin.created_at,
+  };
+}
+
+async function listAdmins() {
+  const Admin = require("../admins/admin.model");
+  const admins = await Admin.findAll({
+    attributes: ["id", "username", "name", "admin_role", "created_at"],
+    order: [["created_at", "ASC"]],
+  });
+  return { admins: admins.map(serializeAdmin) };
+}
+
+async function createAdmin(body) {
+  const Admin = require("../admins/admin.model");
+  const ADMIN_ROLES = Admin.ADMIN_ROLES || [
+    "super_admin",
+    "operations",
+    "finance",
+  ];
+  const bcrypt = require("bcryptjs");
+
+  const username = (body.username || "").trim();
+  const plainPassword = body.password == null ? "" : String(body.password);
+  const name = body.name != null ? String(body.name).trim() || null : null;
+  const adminRole = (body.admin_role || body.adminRole || "operations").trim();
+
+  if (!username) {
+    const error = new Error("Username is required");
+    error.status = 400;
+    throw error;
+  }
+  if (username.length < 3 || username.length > 50) {
+    const error = new Error("Username must be 3–50 characters");
+    error.status = 400;
+    throw error;
+  }
+  if (!plainPassword || plainPassword.length < 6) {
+    const error = new Error("Password must be at least 6 characters");
+    error.status = 400;
+    throw error;
+  }
+  if (!ADMIN_ROLES.includes(adminRole)) {
+    const error = new Error(
+      `admin_role must be one of: ${ADMIN_ROLES.join(", ")}`
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  const existing = await Admin.findOne({ where: { username } });
+  if (existing) {
+    const error = new Error("Username already taken");
+    error.status = 409;
+    throw error;
+  }
+
+  const password_hash = bcrypt.hashSync(plainPassword, 10);
+  const admin = await Admin.create({
+    username,
+    password_hash,
+    name,
+    admin_role: adminRole,
+  });
+
+  return { admin: serializeAdmin(admin) };
+}
+
+async function updateAdmin(adminId, body) {
+  const Admin = require("../admins/admin.model");
+  const ADMIN_ROLES = Admin.ADMIN_ROLES || [
+    "super_admin",
+    "operations",
+    "finance",
+  ];
+
+  const admin = await Admin.findByPk(adminId);
+  if (!admin) {
+    const error = new Error("Admin not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const updates = {};
+  if (body.name !== undefined) {
+    updates.name =
+      body.name == null ? null : String(body.name).trim() || null;
+  }
+
+  const nextRoleRaw = body.admin_role ?? body.adminRole;
+  if (nextRoleRaw !== undefined) {
+    const nextRole = String(nextRoleRaw).trim();
+    if (!ADMIN_ROLES.includes(nextRole)) {
+      const error = new Error(
+        `admin_role must be one of: ${ADMIN_ROLES.join(", ")}`
+      );
+      error.status = 400;
+      throw error;
+    }
+    if (
+      admin.admin_role === "super_admin" &&
+      nextRole !== "super_admin"
+    ) {
+      const superCount = await Admin.count({
+        where: { admin_role: "super_admin" },
+      });
+      if (superCount <= 1) {
+        const error = new Error("Cannot demote the last super_admin");
+        error.status = 400;
+        throw error;
+      }
+    }
+    updates.admin_role = nextRole;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    const error = new Error("No fields to update");
+    error.status = 400;
+    throw error;
+  }
+
+  await admin.update(updates);
+  return { admin: serializeAdmin(admin) };
+}
+
+async function updateAdminPassword(adminId, body) {
+  const Admin = require("../admins/admin.model");
+  const bcrypt = require("bcryptjs");
+
+  const admin = await Admin.findByPk(adminId);
+  if (!admin) {
+    const error = new Error("Admin not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const plainPassword = body.password == null ? "" : String(body.password);
+  if (!plainPassword || plainPassword.length < 6) {
+    const error = new Error("Password must be at least 6 characters");
+    error.status = 400;
+    throw error;
+  }
+
+  await admin.update({ password_hash: bcrypt.hashSync(plainPassword, 10) });
+  return { ok: true };
+}
+
 module.exports = {
   getDashboardOverview,
   getUsers,
@@ -1072,4 +1225,8 @@ module.exports = {
   getAllDriversPaymentSummary,
   updateDeliveryPayment,
   updateDeliveryRemark,
+  listAdmins,
+  createAdmin,
+  updateAdmin,
+  updateAdminPassword,
 };

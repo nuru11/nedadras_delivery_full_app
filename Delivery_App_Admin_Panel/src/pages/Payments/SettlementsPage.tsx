@@ -10,8 +10,10 @@ import {
   Settlement,
 } from "../../services/settlement.service";
 import { getDrivers } from "../../services/driver.service";
+import { can } from "../../utils/adminPermissions";
 
 export default function SettlementsPage() {
+  const canWriteSettlements = can("settlements:write");
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [drivers, setDrivers] = useState<{ id: string; name?: string; phone?: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,6 +109,7 @@ export default function SettlementsPage() {
       />
       <PageBreadcrumb pageTitle="Settlements" />
       <div className="space-y-6">
+        {canWriteSettlements && (
         <ComponentCard
           title="Record settlement"
           desc="Record cash received from a driver (handover)"
@@ -181,6 +184,7 @@ export default function SettlementsPage() {
             </button>
           </form>
         </ComponentCard>
+        )}
 
         <ComponentCard
           title="Settlements list"

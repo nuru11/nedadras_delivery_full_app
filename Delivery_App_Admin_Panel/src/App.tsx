@@ -20,6 +20,7 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
+import PermissionRoute from "./routes/PermissionRoute";
 import AuthRoute from "./routes/AuthRoute";
 import TripsTable from "./pages/Trips/TripsTable";
 import OngoingJourneys from "./pages/Trips/OngoingJourneys";
@@ -35,6 +36,7 @@ import CommissionRatesPage from "./pages/Settings/CommissionRatesPage";
 import PendingUsersTable from "./pages/Users/PendingUsersTable";
 import ActiveUsersTable from "./pages/Users/ActiveUsersTable";
 import InactiveUsersTable from "./pages/Users/InactiveUsersTable";
+import AdminsPage from "./pages/Admins/AdminsPage";
 
 export default function App() {
   return (
@@ -45,38 +47,41 @@ export default function App() {
         {/* 🔒 Protected Dashboard */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route index path="/" element={<Home />} />
+            <Route element={<PermissionRoute />}>
+              <Route index path="/" element={<Home />} />
 
-            <Route path="/profile" element={<UserProfiles />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/blank" element={<Blank />} />
+              <Route path="/profile" element={<UserProfiles />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/blank" element={<Blank />} />
 
-            <Route path="/form-elements" element={<FormElements />} />
-            <Route path="/basic-tables" element={<BasicTables />} /> {/* All Users */}
-            <Route path="/users/pending" element={<PendingUsersTable />} />
-            <Route path="/users/active" element={<ActiveUsersTable />} />
-            <Route path="/users/inactive" element={<InactiveUsersTable />} />
-            <Route path="/drivers" element={<DriversTable />} />
-            <Route path="/drivers/pending" element={<PendingDriversTable />} />
-            <Route path="/drivers/active" element={<ActiveDriversTable />} />
-            <Route path="/drivers/inactive" element={<InactiveDriversTable />} />
-            <Route path="/trips" element={<TripsTable />} />
-            <Route path="/ongoing-journeys" element={<OngoingJourneys />} />
-            <Route path="/trips-history" element={<TripsHistory />} />
-            <Route path="/payments/settlements" element={<SettlementsPage />} />
-            <Route path="/payments/summary" element={<PaymentSummaryPage />} />
-            <Route path="/payments/driver/:id" element={<DriverPaymentSummaryPage />} />
-            <Route path="/settings/commission-rates" element={<CommissionRatesPage />} />
+              <Route path="/form-elements" element={<FormElements />} />
+              <Route path="/basic-tables" element={<BasicTables />} /> {/* All Users */}
+              <Route path="/users/pending" element={<PendingUsersTable />} />
+              <Route path="/users/active" element={<ActiveUsersTable />} />
+              <Route path="/users/inactive" element={<InactiveUsersTable />} />
+              <Route path="/drivers" element={<DriversTable />} />
+              <Route path="/drivers/pending" element={<PendingDriversTable />} />
+              <Route path="/drivers/active" element={<ActiveDriversTable />} />
+              <Route path="/drivers/inactive" element={<InactiveDriversTable />} />
+              <Route path="/trips" element={<TripsTable />} />
+              <Route path="/ongoing-journeys" element={<OngoingJourneys />} />
+              <Route path="/trips-history" element={<TripsHistory />} />
+              <Route path="/payments/settlements" element={<SettlementsPage />} />
+              <Route path="/payments/summary" element={<PaymentSummaryPage />} />
+              <Route path="/payments/driver/:id" element={<DriverPaymentSummaryPage />} />
+              <Route path="/settings/commission-rates" element={<CommissionRatesPage />} />
+              <Route path="/admins" element={<AdminsPage />} />
 
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/avatars" element={<Avatars />} />
-            <Route path="/badge" element={<Badges />} />
-            <Route path="/buttons" element={<Buttons />} />
-            <Route path="/images" element={<Images />} />
-            <Route path="/videos" element={<Videos />} />
+              <Route path="/alerts" element={<Alerts />} />
+              <Route path="/avatars" element={<Avatars />} />
+              <Route path="/badge" element={<Badges />} />
+              <Route path="/buttons" element={<Buttons />} />
+              <Route path="/images" element={<Images />} />
+              <Route path="/videos" element={<Videos />} />
 
-            <Route path="/line-chart" element={<LineChart />} />
-            <Route path="/bar-chart" element={<BarChart />} />
+              <Route path="/line-chart" element={<LineChart />} />
+              <Route path="/bar-chart" element={<BarChart />} />
+            </Route>
           </Route>
         </Route>
 
