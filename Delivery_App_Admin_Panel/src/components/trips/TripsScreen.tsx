@@ -23,7 +23,7 @@ import {
 } from "../../services/delivery.service";
 import { getDrivers, Driver } from "../../services/driver.service";
 import { getUsers, User } from "../../services/user.service";
-import { can } from "../../utils/adminPermissions";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 const STATUS_COLORS: Record<
   string,
@@ -38,6 +38,7 @@ const STATUS_COLORS: Record<
 };
 
 export default function TripsScreen() {
+  const { can } = useAdminAuth();
   const canWriteDeliveries = can("deliveries:write");
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);

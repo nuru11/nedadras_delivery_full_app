@@ -8,9 +8,10 @@ import {
   getCommissionRates,
   updateCommissionRates,
 } from "../../services/settings.service";
-import { can } from "../../utils/adminPermissions";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 export default function CommissionRatesPage() {
+  const { can } = useAdminAuth();
   const canWriteCommission = can("commission:write");
   const [inHousePercent, setInHousePercent] = useState<number>(10);
   const [freelancerPercent, setFreelancerPercent] = useState<number>(30);

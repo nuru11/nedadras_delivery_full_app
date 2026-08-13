@@ -18,7 +18,8 @@ import {
 
 
 import { useSidebar } from "../context/SidebarContext";
-import { can, type AdminPermission } from "../utils/adminPermissions";
+import { useAdminAuth } from "../context/AdminAuthContext";
+import type { AdminPermission } from "../utils/adminPermissions";
 // import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
@@ -103,6 +104,7 @@ const othersItems: NavItem[] = [];
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
+  const { can, adminRole } = useAdminAuth();
 
   const navItems = useMemo(() => {
     return allNavItems
@@ -120,7 +122,7 @@ const AppSidebar: React.FC = () => {
         return item;
       })
       .filter(Boolean) as NavItem[];
-  }, [location.pathname]);
+  }, [can, adminRole, location.pathname]);
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main" | "others";

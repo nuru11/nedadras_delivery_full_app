@@ -10,7 +10,7 @@ import {
   updateDeliveryPayment,
   updateDeliveryRemark,
 } from "../../services/delivery.service";
-import { can } from "../../utils/adminPermissions";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 const STATUS_COLORS: Record<
   string,
@@ -50,6 +50,7 @@ function paymentLabel(d: Delivery): string {
 }
 
 export default function TripsHistoryScreen() {
+  const { can } = useAdminAuth();
   const canWriteDeliveries = can("deliveries:write");
   const canMarkPayment = can("deliveries:payment");
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);

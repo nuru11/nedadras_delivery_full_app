@@ -23,3 +23,8 @@ export const adminLogin = async (
   });
   return data;
 };
+
+export const fetchCurrentAdmin = async (): Promise<AdminUser> => {
+  const { data } = await api.get<{ user: AdminUser }>("/auth/me");
+  return data.user;
+};

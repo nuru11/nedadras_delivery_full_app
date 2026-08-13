@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { can, type AdminPermission } from "../utils/adminPermissions";
+import { useAdminAuth } from "../context/AdminAuthContext";
+import type { AdminPermission } from "../utils/adminPermissions";
 
 const ROUTE_PERMISSIONS: { prefix: string; permission: AdminPermission }[] = [
   { prefix: "/admins", permission: "admins:manage" },
@@ -18,7 +19,10 @@ const ROUTE_PERMISSIONS: { prefix: string; permission: AdminPermission }[] = [
 function requiredPermissionForPath(pathname: string): AdminPermission | null {
   if (pathname === "/") return "dashboard:read";
   const match = ROUTE_PERMISSIONS.find(
-    (r) => pathname === r.prefix || pathname.startsWith(`${r.prefix}/`) || pathname.startsWith(r.prefix)
+    (r) =>
+      pathname === r.prefix ||
+      pathname.startsWith(`${r.prefix}/`) ||
+      pathname.startsWith(r.prefix)
   );
   return match?.permission ?? null;
 }
@@ -28,7 +32,14 @@ function requiredPermissionForPath(pathname: string): AdminPermission | null {
  */
 export default function PermissionRoute() {
   const location = useLocation();
+  const { can, ready } = useAdminAuth();
   const permission = requiredPermissionForPath(location.pathname);
+
+  if (!ready) {
+    return (
+      <p className="text-sm text-gray-600 dark:text-gray-300">Loading…</p>
+    );
+  }
 
   if (permission && !can(permission)) {
     return <Navigate to="/" replace />;

@@ -7,13 +7,14 @@ import {
   updateDriverStatus,
   updateDriverType,
 } from "../../services/driver.service";
-import { can } from "../../utils/adminPermissions";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 interface DriversScreenProps {
   filterStatus?: Driver["status"];
 }
 
 export default function DriversScreen({ filterStatus }: DriversScreenProps) {
+  const { can } = useAdminAuth();
   const canWriteDrivers = can("drivers:write");
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);

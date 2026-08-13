@@ -20,21 +20,9 @@ import {
   updateAdminPassword,
 } from "../../services/admin.service";
 import type { AdminRole } from "../../utils/adminPermissions";
+import { roleLabel } from "../../utils/adminPermissions";
 
 const ROLE_OPTIONS: AdminRole[] = ["super_admin", "operations", "finance"];
-
-function roleLabel(role: string) {
-  switch (role) {
-    case "super_admin":
-      return "Super admin";
-    case "operations":
-      return "Operations";
-    case "finance":
-      return "Finance";
-    default:
-      return role;
-  }
-}
 
 export default function AdminsPage() {
   const [admins, setAdmins] = useState<PanelAdmin[]>([]);

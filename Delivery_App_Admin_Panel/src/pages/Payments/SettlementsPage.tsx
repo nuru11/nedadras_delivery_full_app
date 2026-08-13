@@ -10,9 +10,10 @@ import {
   Settlement,
 } from "../../services/settlement.service";
 import { getDrivers } from "../../services/driver.service";
-import { can } from "../../utils/adminPermissions";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 export default function SettlementsPage() {
+  const { can } = useAdminAuth();
   const canWriteSettlements = can("settlements:write");
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [drivers, setDrivers] = useState<{ id: string; name?: string; phone?: string }[]>([]);

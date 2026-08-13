@@ -6,7 +6,7 @@ import { Modal } from "../../ui/modal";
 import Label from "../../form/Label";
 import UserWalletModal from "../../users/UserWalletModal";
 import { getAllUsers, AdminUser, updateUserStatus, createUser } from "../../../services/user.service";
-import { can } from "../../../utils/adminPermissions";
+import { useAdminAuth } from "../../../context/AdminAuthContext";
 
 type FilterType = "all" | "today" | "week" | "month";
 
@@ -15,6 +15,7 @@ interface UsersTableProps {
 }
 
 export default function UsersTable({ statusFilter }: UsersTableProps) {
+  const { can } = useAdminAuth();
   const canWriteUsers = can("users:write");
   const canDeposit = can("wallet:deposit");
   const [users, setUsers] = useState<AdminUser[]>([]);

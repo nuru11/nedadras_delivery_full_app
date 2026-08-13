@@ -103,3 +103,16 @@ export function getAuthUser(): {
     return null;
   }
 }
+
+export function roleLabel(role: string | null | undefined): string {
+  switch (role) {
+    case "super_admin":
+      return "Super admin";
+    case "operations":
+      return "Operations";
+    case "finance":
+      return "Finance";
+    default:
+      return role || "Unknown";
+  }
+}

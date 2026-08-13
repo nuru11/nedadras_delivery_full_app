@@ -4,9 +4,11 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
 import { adminLogin } from "../../services/auth.service";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 export default function SignInForm() {
   const navigate = useNavigate();
+  const { setSession } = useAdminAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -20,10 +22,7 @@ export default function SignInForm() {
 
     try {
       const res = await adminLogin(username, password);
-
-      localStorage.setItem("auth_token", res.token);
-      localStorage.setItem("auth_user", JSON.stringify(res.user));
-
+      setSession(res.token, res.user);
       navigate("/", { replace: true });
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };

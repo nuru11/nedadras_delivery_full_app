@@ -9,7 +9,7 @@ import {
   updateDeliveryStatus,
   Delivery,
 } from "../../services/delivery.service";
-import { can } from "../../utils/adminPermissions";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 const STATUS_COLORS: Record<
   string,
@@ -47,6 +47,7 @@ function dropDisplay(d: Delivery): string {
 }
 
 export default function OngoingJourneysScreen() {
+  const { can } = useAdminAuth();
   const canWriteDeliveries = can("deliveries:write");
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
