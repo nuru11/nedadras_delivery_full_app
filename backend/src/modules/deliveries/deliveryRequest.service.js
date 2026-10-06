@@ -6,7 +6,6 @@ const Delivery = require("./delivery.model");
 const DeliveryRequest = require("./deliveryRequest.model");
 const { getIo } = require("../../config/socket");
 const { binToUuid, newUuidBin } = require("../../utils/uuid");
-const afromessage = require("../afromessage/afromessage.service");
 
 /**
  * Driver accepts a delivery request (transactional).
@@ -124,48 +123,6 @@ async function accept(requestIdBin, driverUserId) {
         },
       });
       io.to("drivers").emit("driver:delivery_request_removed", { deliveryId: deliveryIdStr });
-    }
-
-    // Notify sender via SMS with delivery details (fire-and-forget)
-    const senderUser = await User.findByPk(userId, { attributes: ["phone"], transaction });
-    if (senderUser?.phone) {
-      const pickup =
-        (delivery.pickup_name && String(delivery.pickup_name).trim()) ||
-        delivery.pickup_address ||
-        "—";
-      const drop =
-        (delivery.drop_name && String(delivery.drop_name).trim()) ||
-        delivery.drop_address ||
-        "—";
-      const price = delivery.price != null ? Number(delivery.price) : null;
-      const km =
-        delivery.distance_km != null ? Number(delivery.distance_km) : null;
-      const weight = delivery.weight_kg != null ? Number(delivery.weight_kg) : null;
-      const note = delivery.description && String(delivery.description).trim() ? String(delivery.description).trim() : null;
-      const orderNum = String(delivery.order_number ?? 0).padStart(6, "0");
-      const parts = [
-        `Order #${orderNum}.`,
-        "Your delivery has been accepted.",
-        `Driver: ${driver_name || "Assigned"}. Contact: ${driver_phone || "N/A"}.`,
-        `Pickup: ${String(pickup).slice(0, 50)}${String(pickup).length > 50 ? "..." : ""}`,
-        `Drop: ${String(drop).slice(0, 50)}${String(drop).length > 50 ? "..." : ""}`,
-      ];
-      if (price != null && !Number.isNaN(price)) {
-        parts.push(`Price: ${price} ETB`);
-      }
-      if (km != null && !Number.isNaN(km) && km > 0) {
-        parts.push(`Distance: ${km} km`);
-      }
-      if (weight != null && !Number.isNaN(weight)) {
-        parts.push(`Weight: ${weight} kg`);
-      }
-      if (note) {
-        parts.push(`Note: ${note.slice(0, 80)}${note.length > 80 ? "..." : ""}`);
-      }
-      const smsMessage = parts.join(" ");
-      // afromessage
-      //   .sendSms(senderUser.phone, smsMessage)
-      //   .catch((err) => console.error("SMS to sender after accept failed:", err.message));
     }
 
     const updatedDr = await DeliveryRequest.findByPk(requestIdBin, { transaction });

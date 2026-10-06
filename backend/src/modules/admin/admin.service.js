@@ -10,19 +10,9 @@ const SettingsService = require("../settings/settings.service");
 const WalletService = require("../wallet/wallet.service");
 const { getIo } = require("../../config/socket");
 const { binToUuid, uuidToBin, newUuidBin } = require("../../utils/uuid");
-const afromessage = require("../afromessage/afromessage.service");
 
 const ONGOING_DRIVER_STATUSES = ["accepted", "picked", "on_way"];
 const { fn, col } = require("sequelize");
-const CUSTOMER_LEVEL_LABELS = {
-  level_1: "Level 1",
-  level_2: "Level 2",
-  level_3: "Level 3",
-};
-
-function formatCustomerLevel(customerType) {
-  return CUSTOMER_LEVEL_LABELS[customerType] || "Level 1";
-}
 
 async function getDashboardOverview() {
   const [
@@ -365,60 +355,6 @@ async function createDelivery(body) {
       ? binToUuid(delivery.id)
       : delivery.id;
 
-  // Notify requester via SMS when admin creates trip (fire-and-forget)
-  if (body.user_id) {
-    const requester = await User.findByPk(body.user_id, {
-      attributes: ["phone"],
-    });
-    if (requester?.phone) {
-      const pickup =
-        (deliveryData.pickup_name && String(deliveryData.pickup_name).trim()) ||
-        deliveryData.pickup_address ||
-        "—";
-      const drop =
-        (deliveryData.drop_name && String(deliveryData.drop_name).trim()) ||
-        deliveryData.drop_address ||
-        "—";
-      const price = deliveryData.price != null ? Number(deliveryData.price) : null;
-      const km =
-        deliveryData.distance_km != null
-          ? Number(deliveryData.distance_km)
-          : null;
-      const obj = deliveryData.object_type || "";
-      const weight = deliveryData.weight_kg != null ? Number(deliveryData.weight_kg) : null;
-      const note = deliveryData.description && String(deliveryData.description).trim() ? String(deliveryData.description).trim() : null;
-      const orderNum = String(deliveryData.order_number ?? 0).padStart(6, "0");
-      const parts = [
-        `Order #${orderNum}.`,
-        "Your delivery trip has been created.",
-        `Pickup: ${String(pickup).slice(0, 50)}${String(pickup).length > 50 ? "..." : ""}`,
-        `Drop: ${String(drop).slice(0, 50)}${String(drop).length > 50 ? "..." : ""}`,
-      ];
-      if (price != null && !Number.isNaN(price)) {
-        parts.push(`Price: ${price} ETB`);
-      }
-      if (km != null && !Number.isNaN(km)) {
-        parts.push(`Distance: ${km} km`);
-      }
-      if (weight != null && !Number.isNaN(weight)) {
-        parts.push(`Weight: ${weight} kg`);
-      }
-      if (obj) {
-        parts.push(`Type: ${obj}`);
-      }
-      if (note) {
-        parts.push(`Note: ${note.slice(0, 80)}${note.length > 80 ? "..." : ""}`);
-      }
-      parts.push("Check the app for details.");
-      const smsMessage = parts.join(" ");
-      afromessage
-        .sendSms(requester.phone, smsMessage)
-        .catch((err) =>
-          console.error("SMS to requester after create trip failed:", err.message)
-        );
-    }
-  }
-
   return {
     delivery: { ...deliveryData, id: idStr },
     deliveryRequestCount: deliveryRequests.length,
@@ -448,48 +384,6 @@ async function createOutsideTownDelivery(body) {
     delivery.id && Buffer.isBuffer(delivery.id)
       ? binToUuid(delivery.id)
       : delivery.id;
-
-  if (body.user_id) {
-    const requester = await User.findByPk(body.user_id, {
-      attributes: ["phone"],
-    });
-    if (requester?.phone) {
-      const pickup =
-        (deliveryData.pickup_name && String(deliveryData.pickup_name).trim()) ||
-        deliveryData.pickup_address ||
-        "—";
-      const drop =
-        (deliveryData.drop_name && String(deliveryData.drop_name).trim()) ||
-        deliveryData.drop_address ||
-        "—";
-      const price = deliveryData.price != null ? Number(deliveryData.price) : null;
-      const weight = deliveryData.weight_kg != null ? Number(deliveryData.weight_kg) : null;
-      const note = deliveryData.description && String(deliveryData.description).trim() ? String(deliveryData.description).trim() : null;
-      const orderNum = String(deliveryData.order_number ?? 0).padStart(6, "0");
-      const parts = [
-        `Order #${orderNum}.`,
-        "Your outside-town delivery trip has been created.",
-        `Pickup: ${String(pickup).slice(0, 50)}${String(pickup).length > 50 ? "..." : ""}`,
-        `Drop: ${String(drop).slice(0, 50)}${String(drop).length > 50 ? "..." : ""}`,
-      ];
-      if (price != null && !Number.isNaN(price)) {
-        parts.push(`Price: ${price} ETB`);
-      }
-      if (weight != null && !Number.isNaN(weight)) {
-        parts.push(`Weight: ${weight} kg`);
-      }
-      if (note) {
-        parts.push(`Note: ${note.slice(0, 80)}${note.length > 80 ? "..." : ""}`);
-      }
-      parts.push("Check the app for details.");
-      const smsMessage = parts.join(" ");
-      afromessage
-        .sendSms(requester.phone, smsMessage)
-        .catch((err) =>
-          console.error("SMS to requester after create outside-town trip failed:", err.message)
-        );
-    }
-  }
 
   return {
     delivery: { ...deliveryData, id: idStr },
@@ -598,118 +492,6 @@ async function assignDelivery(deliveryId, driverId) {
         deliveryId: deliveryIdStr,
       });
       io.to(`driver:${driver.user_id}`).emit("driver:delivery_assigned", payload);
-    }
-
-    // Notify sender via SMS when admin assigns driver (fire-and-forget)
-    if (delivery.user_id) {
-      const senderUser = await User.findByPk(delivery.user_id, {
-        attributes: ["phone", "customer_type"],
-        transaction,
-      });
-      if (senderUser?.phone) {
-        const driver_name = driver.User?.name ?? null;
-        const driver_phone = driver.User?.phone ?? null;
-        const pickup =
-          (delivery.pickup_name && String(delivery.pickup_name).trim()) ||
-          delivery.pickup_address ||
-          "—";
-        const drop =
-          (delivery.drop_name && String(delivery.drop_name).trim()) ||
-          delivery.drop_address ||
-          "—";
-        const price = delivery.price != null ? Number(delivery.price) : null;
-        const km =
-          delivery.distance_km != null ? Number(delivery.distance_km) : null;
-        const weight = delivery.weight_kg != null ? Number(delivery.weight_kg) : null;
-        const note = delivery.description && String(delivery.description).trim() ? String(delivery.description).trim() : null;
-        const orderNum = String(delivery.order_number ?? 0).padStart(6, "0");
-        const parts = [
-          `Order #${orderNum}.`,
-          "Your delivery has been accepted.",
-          `Driver: ${driver_name || "Assigned"}. Contact: ${driver_phone || "N/A"}.`,
-          `Pickup: ${String(pickup).slice(0, 50)}${String(pickup).length > 50 ? "..." : ""}`,
-          `Drop: ${String(drop).slice(0, 50)}${String(drop).length > 50 ? "..." : ""}`,
-        ];
-        if (price != null && !Number.isNaN(price)) {
-          parts.push(`Price: ${price} ETB`);
-        }
-        if (km != null && !Number.isNaN(km) && km > 0) {
-          parts.push(`Distance: ${km} km`);
-        }
-        if (weight != null && !Number.isNaN(weight)) {
-          parts.push(`Weight: ${weight} kg`);
-        }
-        if (note) {
-          parts.push(`Note: ${note.slice(0, 80)}${note.length > 80 ? "..." : ""}`);
-        }
-        const smsMessage = parts.join(" ");
-        // afromessage
-        //   .sendSms(senderUser.phone, smsMessage)
-        //   .catch((err) => console.error("SMS to sender after admin assign failed:", err.message));
-      }
-    }
-
-    // Notify driver via SMS when admin assigns him (fire-and-forget)
-    if (driver.User?.phone) {
-      const senderUser = delivery.user_id
-        ? await User.findByPk(delivery.user_id, {
-            attributes: ["customer_type"],
-            transaction,
-          })
-        : null;
-      const customerLevelLabel = formatCustomerLevel(senderUser?.customer_type);
-      const pickup =
-        (delivery.pickup_name && String(delivery.pickup_name).trim()) ||
-        delivery.pickup_address ||
-        "—";
-      const drop =
-        (delivery.drop_name && String(delivery.drop_name).trim()) ||
-        delivery.drop_address ||
-        "—";
-      const price = delivery.price != null ? Number(delivery.price) : null;
-      const km =
-        delivery.distance_km != null ? Number(delivery.distance_km) : null;
-      const weight = delivery.weight_kg != null ? Number(delivery.weight_kg) : null;
-      const note = delivery.description && String(delivery.description).trim() ? String(delivery.description).trim() : null;
-      const orderNum = String(delivery.order_number ?? 0).padStart(6, "0");
-      const parts = [
-        `Order #${orderNum}.`,
-        "You have been assigned a delivery trip.",
-        `Customer level: ${customerLevelLabel}.`,
-        `Pickup: ${String(pickup).slice(0, 50)}${String(pickup).length > 50 ? "..." : ""}`,
-        `Drop: ${String(drop).slice(0, 50)}${String(drop).length > 50 ? "..." : ""}`,
-      ];
-      if (price != null && !Number.isNaN(price)) {
-        parts.push(`Price: ${price} ETB`);
-      }
-      if (km != null && !Number.isNaN(km) && km > 0) {
-        parts.push(`Distance: ${km} km`);
-      }
-      if (weight != null && !Number.isNaN(weight)) {
-        parts.push(`Weight: ${weight} kg`);
-      }
-      if (note) {
-        parts.push(`Note: ${note.slice(0, 80)}${note.length > 80 ? "..." : ""}`);
-      }
-      const receiverName =
-        delivery.receiver_name && String(delivery.receiver_name).trim()
-          ? String(delivery.receiver_name).trim()
-          : null;
-      const receiverPhone =
-        delivery.receiver_phone && String(delivery.receiver_phone).trim()
-          ? String(delivery.receiver_phone).trim()
-          : null;
-      if (receiverName || receiverPhone) {
-        const receiver = [receiverName, receiverPhone].filter(Boolean).join(" ");
-        parts.push(`Receiver: ${receiver}`);
-      }
-      parts.push("Check the app for details.");
-      const driverSmsMessage = parts.join(" ");
-      afromessage
-        .sendSms(driver.User.phone, driverSmsMessage)
-        .catch((err) =>
-          console.error("SMS to driver after admin assign failed:", err.message)
-        );
     }
 
     const updated = await Delivery.findByPk(delivery.id, {

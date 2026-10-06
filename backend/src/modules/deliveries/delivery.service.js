@@ -22,6 +22,106 @@ const NEARBY_RADIUS_KM = 3;
 const ORDER_NUMBER_SEQUENCE_NAME = "delivery_order_number";
 const ORDER_NUMBER_MAX = 999999;
 
+function formatTripSmsFields(delivery) {
+  const pickup =
+    (delivery.pickup_name && String(delivery.pickup_name).trim()) ||
+    delivery.pickup_address ||
+    "—";
+  const drop =
+    (delivery.drop_name && String(delivery.drop_name).trim()) ||
+    delivery.drop_address ||
+    "—";
+  const price = delivery.price != null ? Number(delivery.price) : null;
+  const km = delivery.distance_km != null ? Number(delivery.distance_km) : null;
+  const weight = delivery.weight_kg != null ? Number(delivery.weight_kg) : null;
+  const note =
+    delivery.description && String(delivery.description).trim()
+      ? String(delivery.description).trim()
+      : null;
+  const orderNum = String(delivery.order_number ?? 0).padStart(6, "0");
+  const receiverName =
+    delivery.receiver_name && String(delivery.receiver_name).trim()
+      ? String(delivery.receiver_name).trim()
+      : null;
+  const receiverPhone =
+    delivery.receiver_phone && String(delivery.receiver_phone).trim()
+      ? String(delivery.receiver_phone).trim()
+      : null;
+  return { pickup, drop, price, km, weight, note, orderNum, receiverName, receiverPhone };
+}
+
+function appendTripSmsDetails(parts, fields) {
+  parts.push(
+    `Pickup: ${String(fields.pickup).slice(0, 50)}${String(fields.pickup).length > 50 ? "..." : ""}`,
+    `Drop: ${String(fields.drop).slice(0, 50)}${String(fields.drop).length > 50 ? "..." : ""}`
+  );
+  if (fields.price != null && !Number.isNaN(fields.price)) {
+    parts.push(`Price: ${fields.price} ETB`);
+  }
+  if (fields.km != null && !Number.isNaN(fields.km) && fields.km > 0) {
+    parts.push(`Distance: ${fields.km} km`);
+  }
+  if (fields.weight != null && !Number.isNaN(fields.weight)) {
+    parts.push(`Weight: ${fields.weight} kg`);
+  }
+  if (fields.note) {
+    parts.push(`Note: ${fields.note.slice(0, 80)}${fields.note.length > 80 ? "..." : ""}`);
+  }
+  if (fields.receiverName || fields.receiverPhone) {
+    parts.push(
+      `Receiver: ${[fields.receiverName, fields.receiverPhone].filter(Boolean).join(" ")}`
+    );
+  }
+}
+
+function sendTripSms(phone, message, errorLabel) {
+  if (!phone) return;
+  afromessage
+    .sendSms(phone, message)
+    .catch((err) => console.error(errorLabel, err.message));
+}
+
+async function getDriverUserForSms(delivery) {
+  if (delivery.Driver?.User?.phone || delivery.Driver?.User?.name) {
+    return delivery.Driver.User;
+  }
+  if (delivery.Driver?.user_id) {
+    return User.findByPk(delivery.Driver.user_id, {
+      attributes: ["name", "phone"],
+    });
+  }
+  if (delivery.driver_id) {
+    const driver = await Driver.findByPk(delivery.driver_id, {
+      include: [{ model: User, as: "User", attributes: ["name", "phone"] }],
+    });
+    return driver?.User || null;
+  }
+  return null;
+}
+
+async function notifyTripDeliveredSms(delivery) {
+  if (!delivery.user_id) return;
+
+  const fields = formatTripSmsFields(delivery);
+  const driverUser = await getDriverUserForSms(delivery);
+  const senderUser = await User.findByPk(delivery.user_id, {
+    attributes: ["phone"],
+  });
+  if (!senderUser?.phone) return;
+
+  const parts = [
+    `Order #${fields.orderNum}.`,
+    "Your delivery has been delivered.",
+    `Driver: ${driverUser?.name || "—"}. Contact: ${driverUser?.phone || "—"}.`,
+  ];
+  appendTripSmsDetails(parts, fields);
+  sendTripSms(
+    senderUser.phone,
+    parts.join(" "),
+    "SMS to sender after delivered failed:"
+  );
+}
+
 /**
  * Get next 6-digit order number (1-999999). Uses sequence table for atomicity.
  * @returns {Promise<number>}
@@ -730,76 +830,8 @@ async function updateDeliveryStatus(deliveryId, userId, role, newStatus) {
     }
   }
 
-  // Notify sender via SMS when driver marks as delivered (fire-and-forget)
-  if (newStatus === "delivered" && delivery.user_id) {
-    const senderUser = await User.findByPk(delivery.user_id, {
-      attributes: ["phone"],
-    });
-    if (senderUser?.phone) {
-      const pickup =
-        (delivery.pickup_name && String(delivery.pickup_name).trim()) ||
-        delivery.pickup_address ||
-        "—";
-      const drop =
-        (delivery.drop_name && String(delivery.drop_name).trim()) ||
-        delivery.drop_address ||
-        "—";
-      const price = delivery.price != null ? Number(delivery.price) : null;
-      const km =
-        delivery.distance_km != null ? Number(delivery.distance_km) : null;
-      let driverName = null;
-      let driverPhone = null;
-      if (delivery.Driver?.user_id) {
-        const driverUser = await User.findByPk(delivery.Driver.user_id, {
-          attributes: ["name", "phone"],
-        });
-        if (driverUser) {
-          driverName = driverUser.name;
-          driverPhone = driverUser.phone;
-        }
-      }
-      const weight = delivery.weight_kg != null ? Number(delivery.weight_kg) : null;
-      const note = delivery.description && String(delivery.description).trim() ? String(delivery.description).trim() : null;
-      const orderNum = String(delivery.order_number ?? 0).padStart(6, "0");
-      const parts = [
-        `Order #${orderNum}.`,
-        "Your delivery has been delivered.",
-        `Driver: ${driverName || "—"}. Contact: ${driverPhone || "—"}.`,
-        `Pickup: ${String(pickup).slice(0, 50)}${String(pickup).length > 50 ? "..." : ""}`,
-        `Drop: ${String(drop).slice(0, 50)}${String(drop).length > 50 ? "..." : ""}`,
-      ];
-      if (price != null && !Number.isNaN(price)) {
-        parts.push(`Price: ${price} ETB`);
-      }
-      if (km != null && !Number.isNaN(km) && km > 0) {
-        parts.push(`Distance: ${km} km`);
-      }
-      if (weight != null && !Number.isNaN(weight)) {
-        parts.push(`Weight: ${weight} kg`);
-      }
-      if (note) {
-        parts.push(`Note: ${note.slice(0, 80)}${note.length > 80 ? "..." : ""}`);
-      }
-      const receiverName =
-        delivery.receiver_name && String(delivery.receiver_name).trim()
-          ? String(delivery.receiver_name).trim()
-          : null;
-      const receiverPhone =
-        delivery.receiver_phone && String(delivery.receiver_phone).trim()
-          ? String(delivery.receiver_phone).trim()
-          : null;
-      if (receiverName || receiverPhone) {
-        parts.push(
-          `Receiver: ${[receiverName, receiverPhone].filter(Boolean).join(" ")}`
-        );
-      }
-      const smsMessage = parts.join(" ");
-      afromessage
-        .sendSms(senderUser.phone, smsMessage)
-        .catch((err) =>
-          console.error("SMS to sender after delivered failed:", err.message)
-        );
-    }
+  if (newStatus === "delivered") {
+    await notifyTripDeliveredSms(delivery);
   }
 
   return updated;
@@ -876,76 +908,8 @@ async function updateDeliveryStatusByAdmin(deliveryId, newStatus) {
     }
   }
 
-  // Notify sender via SMS when admin marks as delivered (fire-and-forget)
-  if (statusLower === "delivered" && delivery.user_id) {
-    const senderUser = await User.findByPk(delivery.user_id, {
-      attributes: ["phone"],
-    });
-    if (senderUser?.phone) {
-      const pickup =
-        (delivery.pickup_name && String(delivery.pickup_name).trim()) ||
-        delivery.pickup_address ||
-        "—";
-      const drop =
-        (delivery.drop_name && String(delivery.drop_name).trim()) ||
-        delivery.drop_address ||
-        "—";
-      const price = delivery.price != null ? Number(delivery.price) : null;
-      const km =
-        delivery.distance_km != null ? Number(delivery.distance_km) : null;
-      let driverName = null;
-      let driverPhone = null;
-      if (delivery.driver_id) {
-        const driver = await Driver.findByPk(delivery.driver_id, {
-          include: [{ model: User, as: "User", attributes: ["name", "phone"] }],
-        });
-        if (driver?.User) {
-          driverName = driver.User.name;
-          driverPhone = driver.User.phone;
-        }
-      }
-      const weight = delivery.weight_kg != null ? Number(delivery.weight_kg) : null;
-      const note = delivery.description && String(delivery.description).trim() ? String(delivery.description).trim() : null;
-      const orderNum = String(delivery.order_number ?? 0).padStart(6, "0");
-      const parts = [
-        `Order #${orderNum}.`,
-        "Your delivery has been delivered.",
-        `Driver: ${driverName || "—"}. Contact: ${driverPhone || "—"}.`,
-        `Pickup: ${String(pickup).slice(0, 50)}${String(pickup).length > 50 ? "..." : ""}`,
-        `Drop: ${String(drop).slice(0, 50)}${String(drop).length > 50 ? "..." : ""}`,
-      ];
-      if (price != null && !Number.isNaN(price)) {
-        parts.push(`Price: ${price} ETB`);
-      }
-      if (km != null && !Number.isNaN(km) && km > 0) {
-        parts.push(`Distance: ${km} km`);
-      }
-      if (weight != null && !Number.isNaN(weight)) {
-        parts.push(`Weight: ${weight} kg`);
-      }
-      if (note) {
-        parts.push(`Note: ${note.slice(0, 80)}${note.length > 80 ? "..." : ""}`);
-      }
-      const receiverName =
-        delivery.receiver_name && String(delivery.receiver_name).trim()
-          ? String(delivery.receiver_name).trim()
-          : null;
-      const receiverPhone =
-        delivery.receiver_phone && String(delivery.receiver_phone).trim()
-          ? String(delivery.receiver_phone).trim()
-          : null;
-      if (receiverName || receiverPhone) {
-        parts.push(
-          `Receiver: ${[receiverName, receiverPhone].filter(Boolean).join(" ")}`
-        );
-      }
-      const smsMessage = parts.join(" ");
-      afromessage
-        .sendSms(senderUser.phone, smsMessage)
-        .catch((err) =>
-          console.error("SMS to sender after admin delivered failed:", err.message)
-        );
-    }
+  if (statusLower === "delivered") {
+    await notifyTripDeliveredSms(delivery);
   }
 
   const updated = await Delivery.findByPk(delivery.id, {
