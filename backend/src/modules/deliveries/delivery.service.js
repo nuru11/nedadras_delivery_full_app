@@ -100,25 +100,56 @@ async function getDriverUserForSms(delivery) {
 }
 
 async function notifyTripDeliveredSms(delivery) {
-  if (!delivery.user_id) return;
-
   const fields = formatTripSmsFields(delivery);
   const driverUser = await getDriverUserForSms(delivery);
-  const senderUser = await User.findByPk(delivery.user_id, {
-    attributes: ["phone"],
-  });
-  if (!senderUser?.phone) return;
 
+  if (delivery.user_id) {
+    const senderUser = await User.findByPk(delivery.user_id, {
+      attributes: ["phone"],
+    });
+    if (senderUser?.phone) {
+      const parts = [
+        `Order #${fields.orderNum}.`,
+        "Your delivery has been delivered.",
+        `Driver: ${driverUser?.name || "—"}. Contact: ${driverUser?.phone || "—"}.`,
+      ];
+      appendTripSmsDetails(parts, fields);
+      sendTripSms(
+        senderUser.phone,
+        parts.join(" "),
+        "SMS to sender after delivered failed:"
+      );
+    }
+  }
+
+  if (driverUser?.phone) {
+    const parts = [
+      `Order #${fields.orderNum}.`,
+      "Your assigned delivery trip has been completed.",
+    ];
+    appendTripSmsDetails(parts, fields);
+    sendTripSms(
+      driverUser.phone,
+      parts.join(" "),
+      "SMS to driver after delivered failed:"
+    );
+  }
+}
+
+async function notifyTripCancelledSms(delivery) {
+  const driverUser = await getDriverUserForSms(delivery);
+  if (!driverUser?.phone) return;
+
+  const fields = formatTripSmsFields(delivery);
   const parts = [
     `Order #${fields.orderNum}.`,
-    "Your delivery has been delivered.",
-    `Driver: ${driverUser?.name || "—"}. Contact: ${driverUser?.phone || "—"}.`,
+    "Your assigned delivery trip has been cancelled.",
   ];
   appendTripSmsDetails(parts, fields);
   sendTripSms(
-    senderUser.phone,
+    driverUser.phone,
     parts.join(" "),
-    "SMS to sender after delivered failed:"
+    "SMS to driver after cancelled failed:"
   );
 }
 
@@ -832,6 +863,8 @@ async function updateDeliveryStatus(deliveryId, userId, role, newStatus) {
 
   if (newStatus === "delivered") {
     await notifyTripDeliveredSms(delivery);
+  } else if (newStatus === "cancelled") {
+    await notifyTripCancelledSms(delivery);
   }
 
   return updated;
@@ -910,6 +943,8 @@ async function updateDeliveryStatusByAdmin(deliveryId, newStatus) {
 
   if (statusLower === "delivered") {
     await notifyTripDeliveredSms(delivery);
+  } else if (statusLower === "cancelled") {
+    await notifyTripCancelledSms(delivery);
   }
 
   const updated = await Delivery.findByPk(delivery.id, {
